@@ -1,27 +1,40 @@
-// EXERCISE 02 · Gateway auth + rate limit + input caps    slide 10: "One gateway. Every control lives there."
-// Run: npm run test:02        Reference: ./solution.ts
-//
-// Every request to the model passes through check(). Return { ok: false, status, error }
-// for the FIRST failing control, in this order:
-//
-//   1. 401 'UNAUTHENTICATED'   no "Bearer <token>" or verifySession() returns null
-//   2. 429 'RATE_LIMITED'      more than maxRequestsPerWindow requests from this userId
-//                              inside one windowMs (a simple fixed window per user is fine)
-//   3. 400 'INVALID_INPUT'     message is not a non-empty string, or document is present
-//                              but not a string
-//   4. 413 'INPUT_TOO_LARGE'   message.length + document.length > maxInputChars
-//
-// Otherwise return { ok: true, userId, message, document } (document defaults to '').
+// ✅ EXERCISE 02 · Gateway auth + rate limit + input caps — solved on branch step-02 (see ./solution.ts)
 import { bearer, verifySession } from '../../src/lib/session.ts';
 import type { GatewayGuard, GuardConfig } from './types.ts';
 
 export function createGatewayGuard(config: GuardConfig): GatewayGuard {
-  void config;
-  void bearer;
-  void verifySession;
+  // Fixed window per user. In production this lives in Redis so every replica shares it.
+  const windows = new Map<string, { start: number; count: number }>();
+
   return {
-    check() {
-      throw new Error('TODO(02): implement the gateway guard');
+    check({ authorization, message, document, now }) {
+      // 1. Who is this? A request without a name attached cannot be limited or audited.
+      const session = verifySession(config.sessionSecret, bearer(authorization), now);
+      if (!session) return { ok: false, status: 401, error: 'UNAUTHENTICATED' };
+
+      // 2. Unbounded consumption (LLM10): an unlimited endpoint is an unlimited invoice.
+      const w = windows.get(session.sub);
+      if (!w || now - w.start >= config.windowMs) {
+        windows.set(session.sub, { start: now, count: 1 });
+      } else if (++w.count > config.maxRequestsPerWindow) {
+        return { ok: false, status: 429, error: 'RATE_LIMITED' };
+      }
+
+      // 3. Shape: never trust that the JSON is what the UI meant to send.
+      if (typeof message !== 'string' || message.trim() === '') {
+        return { ok: false, status: 400, error: 'INVALID_INPUT' };
+      }
+      if (document !== undefined && typeof document !== 'string') {
+        return { ok: false, status: 400, error: 'INVALID_INPUT' };
+      }
+      const doc = document ?? '';
+
+      // 4. Size caps bound both cost and the room an attacker has to work in.
+      if (message.length + doc.length > config.maxInputChars) {
+        return { ok: false, status: 413, error: 'INPUT_TOO_LARGE' };
+      }
+
+      return { ok: true, userId: session.sub, message, document: doc };
     },
   };
 }
