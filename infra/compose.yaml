@@ -1,0 +1,29 @@
+# Slide: "Assume the injection succeeded. Now what?"
+# Each flag removes one thing the attacker wants next.
+#   docker compose -f infra/compose.yaml up --build    ->  http://127.0.0.1:8787
+services:
+  gateway:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+    image: leaky-ai-workshop:local
+    ports:
+      - "127.0.0.1:8787:8787" # loopback only: not on the café wifi
+    environment:
+      # Server-side only. Empty = random per boot. Never VITE_*, never baked into the image.
+      SESSION_SECRET: ${SESSION_SECRET:-}
+      STEP_UP_SECRET: ${STEP_UP_SECRET:-}
+      MOCK_DELAY_MS: "25"
+      # OLLAMA_URL: http://host.docker.internal:11434   # optional sovereign model
+    user: "10001:10001"      # not root
+    read_only: true          # no dropped payloads
+    cap_drop: [ALL]          # no privilege escalation
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      # writable, but nothing there can execute
+      - /tmp:rw,noexec,nosuid,size=64m
+    pids_limit: 128          # no fork bombs
+    mem_limit: 256m          # no denial-of-wallet on your own box
+    restart: unless-stopped
+    # NEVER: - /var/run/docker.sock:/var/run/docker.sock  (that is root on the host)

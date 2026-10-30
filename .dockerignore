@@ -1,0 +1,8 @@
+node_modules
+dist
+dist-vulnerable
+build
+.git
+.env*
+!.env.example
+*.log

@@ -1,0 +1,19 @@
+# Gitleaks config. Default rules + one rule for the provider-key shape from the talk.
+title = "leaky-ai-workshop"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "provider-sk-key"
+description = "Provider-style secret key (sk-..., sk-proj-..., sk-prod-...)"
+# The FIXED pattern from the talk: _ and - are in the character class.
+regex = '''sk-[a-zA-Z0-9_-]{16,}'''
+keywords = ["sk-"]
+
+# Every planted secret in this repo is FAKE and says so in its value. In a real repo you
+# would NOT allowlist by keyword: you would rotate the key and rewrite history.
+[allowlist]
+description = "Workshop fixtures: deliberately planted, clearly labelled FAKE secrets"
+regexTarget = "match"
+regexes = ['''FAKE''']

@@ -1,0 +1,83 @@
+# Slide: "Make the pipeline refuse the mistake"
+# Gitleaks, Semgrep (with our own rules), Trivy, npm audit, plus the tests that prove each control.
+name: security
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: typecheck · tests · bundle audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test # solutions; includes the planted-secret test from exercise 08
+      - run: npm run build
+      - name: One-line audit on the production bundle (must be clean)
+        run: sh scripts/audit-bundle.sh dist
+
+  gitleaks:
+    name: gitleaks (secrets in history)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # scan the whole history, not just the tip
+      - name: gitleaks
+        run: |
+          docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.30.1 \
+            git /repo --config /repo/.gitleaks.toml --redact --verbose
+
+  semgrep:
+    name: semgrep (custom AI-security rules)
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@v4
+      # vulnerable.ts files are the deliberate bugs from the slides; the rules fire on them
+      # locally (npm run scan:semgrep). Everything else must be clean.
+      - run: semgrep scan --config .semgrep/ai-security.yml --exclude 'vulnerable.ts' --error --metrics=off
+
+  trivy:
+    name: trivy (image CVEs + Dockerfile misconfig)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -f infra/Dockerfile -t leaky-ai-workshop:${{ github.sha }} .
+      - name: Fail on CRITICAL/HIGH CVEs in the image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: leaky-ai-workshop:${{ github.sha }}
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'
+      - name: Dockerfile and compose misconfiguration
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: config
+          scan-ref: infra
+          exit-code: '1'
+
+  npm-audit:
+    name: npm audit (production deps gate)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Gate on what ships. Dev-only advisories are reported, not blocking.
+      - run: npm audit --omit=dev --audit-level=high
+      - run: npm audit --audit-level=critical || true

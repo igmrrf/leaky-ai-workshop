@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Leaky AI Workshop</title>
+    <link rel="stylesheet" href="/src/client/styles.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div class="brand">
+        <span class="braces">{</span> Leaky Bank Assistant <span class="braces">}</span>
+        <small>DevFest Abuja 2026 · Your AI App is Leaking</small>
+      </div>
+      <div class="mode" role="radiogroup" aria-label="Security mode">
+        <button id="mode-vulnerable" role="radio" data-mode="vulnerable">Vulnerable</button>
+        <button id="mode-hardened" role="radio" data-mode="hardened">Hardened</button>
+        <span class="demo-note">demo-only toggle (sent as <code>x-demo-mode</code>)</span>
+      </div>
+    </header>
+
+    <div id="pwned" class="pwned-banner" hidden>
+      <strong>XSS: model output just ran JavaScript in this page.</strong>
+      <span id="pwned-detail"></span>
+    </div>
+    <div id="banner" class="banner" hidden></div>
+
+    <main class="layout">
+      <section class="chat">
+        <div class="demos">
+          <button data-demo="injection">1 · Prompt injection</button>
+          <button data-demo="indirect">2 · Indirect injection (document)</button>
+          <button data-demo="transfer">3 · Privileged tool call ($5,000 transfer)</button>
+          <button data-demo="xss">4 · Output handling (LLM05)</button>
+          <button data-demo="clear" class="ghost">Clear</button>
+        </div>
+        <div id="transcript" class="transcript" aria-live="polite"></div>
+        <form id="composer" class="composer">
+          <input id="input" autocomplete="off" placeholder="Ask the assistant anything…" maxlength="5000" />
+          <button type="submit">Send</button>
+        </form>
+        <p id="bundle-key" class="bundle-key"></p>
+      </section>
+
+      <aside class="audit">
+        <h2>Audit trail <small>GET /api/audit</small></h2>
+        <ol id="audit"></ol>
+      </aside>
+    </main>
+
+    <dialog id="stepup" class="stepup">
+      <form method="dialog">
+        <h2>Approve this action?</h2>
+        <p class="stepup-sub">Step-up authentication. In production: a passkey / WebAuthn prompt.</p>
+        <dl id="stepup-details"></dl>
+        <p id="stepup-mode" class="stepup-mode"></p>
+        <div class="stepup-actions">
+          <button value="deny" class="ghost">Deny</button>
+          <button value="approve" class="approve">Approve with passkey</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script type="module" src="/src/client/main.ts"></script>
+  </body>
+</html>

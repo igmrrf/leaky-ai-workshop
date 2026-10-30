@@ -1,0 +1,45 @@
+{
+  "name": "leaky-ai-workshop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "DevFest Abuja 2026 workshop: Your AI App is Leaking. A deliberately vulnerable AI app, its hardened twin, and 8 red-to-green exercises. Every secret in this repo is FAKE.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "demo": "node scripts/dev.mjs",
+    "dev": "node scripts/dev.mjs",
+    "dev:server": "tsx watch src/server/index.ts",
+    "dev:client": "vite",
+    "start": "node build/src/server/index.js",
+    "typecheck": "tsc --noEmit",
+    "build": "vite build && tsc -p tsconfig.build.json",
+    "build:vulnerable": "vite build --mode vulnerable --outDir dist-vulnerable",
+    "audit:bundle": "npm run build:vulnerable && sh scripts/audit-bundle.sh dist-vulnerable",
+    "audit:bundle:fixed": "vite build && sh scripts/audit-bundle.sh dist",
+    "scan:secrets": "sh scripts/security-scan.sh",
+    "scan:semgrep": "semgrep scan --config .semgrep/ai-security.yml exercises src",
+    "test": "vitest run --mode solution",
+    "test:exercises": "vitest run",
+    "test:01": "vitest run exercises/01-key-in-bundle",
+    "test:02": "vitest run exercises/02-gateway-auth-limits",
+    "test:03": "vitest run exercises/03-step-up-ticket",
+    "test:04": "vitest run exercises/04-delimiters",
+    "test:05": "vitest run exercises/05-canary-window",
+    "test:06": "vitest run exercises/06-output-handling",
+    "test:07": "vitest run exercises/07-pii-tokenise",
+    "test:08": "vitest run exercises/08-secret-scanner"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.5",
+    "hono": "^4.13.14"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "tsx": "^4.23.15",
+    "typescript": "~5.9.3",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  }
+}

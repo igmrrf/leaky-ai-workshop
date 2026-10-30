@@ -1,0 +1,43 @@
+# Custom rules: "Write a rule for every bug you ship. That is how a mistake becomes a control."
+#   npm run scan:semgrep        (fires on the vulnerable.ts files, on purpose)
+rules:
+  - id: per-chunk-canary-check
+    languages: [typescript]
+    severity: WARNING
+    message: Canary tested per-chunk; a split token never matches. Use createCanaryMonitor().
+    pattern-either:
+      - pattern: $CHUNK.includes(canaryToken)
+      - pattern: $CHUNK.includes(canary)
+
+  - id: forgeable-step-up-ticket
+    languages: [typescript]
+    severity: ERROR
+    message: >-
+      A prefix check is not a step-up control: the client can construct this ticket.
+      Verify a server-signed ticket bound to user + action + sha256(args), with TTL and single-use jti.
+    pattern: $TICKET.startsWith("MFA_PROOF_")
+
+  - id: client-env-secret
+    languages: [typescript]
+    severity: ERROR
+    message: >-
+      VITE_* / NEXT_PUBLIC_* values are inlined into the client bundle. A secret here ships to every visitor.
+    pattern-regex: (import\.meta\.env|process\.env)\.(VITE|NEXT_PUBLIC)_[A-Z0-9_]*(KEY|SECRET|TOKEN|PASSWORD)
+
+  - id: untrusted-text-in-system-prompt
+    languages: [typescript]
+    severity: WARNING
+    message: >-
+      Untrusted text interpolated into the system role. Put it in a user message inside
+      delimiters and escape the closing tag (exercise 04).
+    pattern-regex: role:\s*['"]system['"],\s*content:\s*`[^`]*\$\{[^}]*(user|document|input)
+
+  - id: model-output-into-innerhtml
+    languages: [typescript]
+    severity: WARNING
+    message: >-
+      LLM05: innerHTML with a non-literal value. If any of it came from a model, it is untrusted
+      input: escape or sanitise first (exercise 06), or use textContent.
+    patterns:
+      - pattern: $EL.innerHTML = $X
+      - pattern-not: $EL.innerHTML = "..."

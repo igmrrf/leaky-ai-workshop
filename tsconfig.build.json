@@ -1,0 +1,13 @@
+{
+  // Compiles ONLY the server (and the shared modules it imports) to build/.
+  // The browser bundle is built by Vite into dist/.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "build",
+    "rootDir": ".",
+    "types": ["node"]
+  },
+  "include": ["src/server", "src/lib", "exercises/*/solution.ts", "exercises/*/vulnerable.ts"],
+  "exclude": ["**/*.test.ts", "src/client"]
+}
