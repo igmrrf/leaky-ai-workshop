@@ -1,18 +1,14 @@
-// EXERCISE 06 · Output handling (LLM05)           slide 21: "Where each control lands" (LLM05 card)
-// Run: npm run test:06        Reference: ./solution.ts
-//
-// The UI renders model output with el.innerHTML = toHtml(text). Treat the model as an
-// untrusted user who happens to be very articulate.
-//
-// TODO:
-//   1. HTML-escape EVERYTHING first:  & < > " '  ->  &amp; &lt; &gt; &quot; &#39;
-//   2. THEN re-enable a tiny, safe subset of markdown on the escaped text:
-//        **bold**            -> <strong>bold</strong>
-//        [label](https://x)  -> <a href="https://x" rel="noopener noreferrer" target="_blank">label</a>
-//      Only http:// and https:// links. A javascript: or data: link stays as plain text.
-//      newline              -> <br>
-// (In a real app: a vetted sanitiser like DOMPurify, or render to text nodes. The idea is the same.)
+// ✅ EXERCISE 06 · Output handling (LLM05) — solved on branch step-06 (see ./solution.ts)
+const ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+
+export const escapeHtml = (text: string): string => text.replace(/[&<>"']/g, (ch) => ESCAPES[ch] ?? ch);
+
 export function toHtml(modelText: string): string {
-  void modelText;
-  throw new Error('TODO(06): escape model output before it reaches the DOM');
+  return escapeHtml(modelText) // 1. nothing the model says can become markup...
+    .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>') // 2. ...except what we add back on purpose
+    .replace(
+      /\[([^\]\n]+)\]\((https?:\/\/[^\s)"<>]+)\)/g, // allow-list the scheme: no javascript:, no data:
+      '<a href="$2" rel="noopener noreferrer" target="_blank">$1</a>',
+    )
+    .replace(/\n/g, '<br>');
 }
