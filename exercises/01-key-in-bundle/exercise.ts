@@ -1,15 +1,18 @@
-// EXERCISE 01 · Key in the bundle               slide 6: "The one-line audit"
-// Run: npm run test:01        Reference: ./solution.ts
-//
-// vite.config.ts calls this guard at build time with every env var. Make the BUILD
-// refuse to ship a secret to the browser, so the mistake can never reach production.
-//
-// TODO: throw an Error (listing the offending variable NAMES, never their values) if
-// any variable that starts with `VITE_` or `NEXT_PUBLIC_`:
-//   1. has a secret-sounding name: KEY, SECRET, TOKEN, PASSWORD or PRIVATE (any case), or
-//   2. has a value that looks like a provider key:  sk-[a-zA-Z0-9_-]{16,}
-// Variables WITHOUT a public prefix are server-only and must be ignored.
+// ✅ EXERCISE 01 · Key in the bundle — solved on branch step-01 (see ./solution.ts)
+const PUBLIC_PREFIXES = ['VITE_', 'NEXT_PUBLIC_'];
+const SECRET_NAME = /KEY|SECRET|TOKEN|PASSWORD|PRIVATE/i;
+const SECRET_VALUE = /sk-[a-zA-Z0-9_-]{16,}/;
+
 export function assertNoSecretsInClientEnv(env: Record<string, string | undefined>): void {
-  void env;
-  throw new Error('TODO(01): implement assertNoSecretsInClientEnv');
+  const offenders = Object.entries(env)
+    .filter(([name]) => PUBLIC_PREFIXES.some((p) => name.startsWith(p)))
+    .filter(([name, value]) => SECRET_NAME.test(name) || SECRET_VALUE.test(value ?? ''))
+    .map(([name]) => name); // names only: never echo the secret into build logs
+
+  if (offenders.length > 0) {
+    throw new Error(
+      `Refusing to build: ${offenders.join(', ')} would be inlined into the client bundle. ` +
+        'Move the secret to the server and call it through the gateway.',
+    );
+  }
 }
